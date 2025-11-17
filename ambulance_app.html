@@ -4,10 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>救護車避讓通知 (原型)</title>
-  <!-- 載入 Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 引入 Inter 字體 -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!-- 載入 Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Inter 字體 --><link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
   
@@ -16,9 +14,6 @@
     body {
       font-family: 'Inter', 'Noto Sans TC', sans-serif;
     }
-
-    /* 隱藏視圖的 class (已移除) */
-    /* .hidden-view { ... } */
 
     /* 發光效果 */
     .shadow-green-glow {
@@ -60,23 +55,25 @@
 </head>
 <body class="bg-gray-900 text-white overflow-hidden">
 
-  <!-- App 容器 -->
-  <div id="app-container" class="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-gray-900 p-6 font-sans">
+  <!-- App 容器 --><div id="app-container" class="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-gray-900 p-6 font-sans">
 
-    <!-- 模式選擇畫面 (預設顯示) -->
-    <div id="selection-view" class="flex flex-col items-center gap-8 w-full">
+    <!-- 模式選擇畫面 (預設顯示) --><div id="selection-view" class="flex flex-col items-center gap-8 w-full">
       <h1 class="text-3xl font-bold text-center text-blue-300">救護車避讓通知系統</h1>
       <h2 class="text-xl text-center text-gray-400">請選擇您的角色：</h2>
       <div class="flex flex-col sm:flex-row gap-6 w-full max-w-md">
-        <!-- 駕駛按鈕 -->
-        <button id="select-driver-btn" class="flex-1 rounded-2xl bg-blue-600 p-8 text-white transition-all hover:bg-blue-500 hover:shadow-2xl hover:-translate-y-1">
+        <!-- 駕駛按鈕 --><button id="select-driver-btn" class="flex-1 rounded-2xl bg-blue-600 p-8 text-white transition-all hover:bg-blue-500 hover:shadow-2xl hover:-translate-y-1">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 20.25h-5.25A2.25 2.25 0 0 1 .75 18V6.75A2.25 2.25 0 0 1 3 4.5h18a2.25 2.25 0 0 1 2.25 2.25v1.5M7.5 4.5v.75m-3.75 0h16.5M13.5 12h-3V9m0 3h3m0 0v3h-3v-3m9 3.75h3l-1.5-1.5-1.5 1.5Z" />
+            <!-- 更換為最簡單的方向盤圖示 -->
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 12m-9 0a9 9 0 1 1 18 0 9 9 0 0 1-18 0Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 12m-2.25 0a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Z" />
+            <!-- 修正輻條座標，使其不超出圓圈 -->
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14.25V21" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.41 10.41 5.64 5.64" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.59 10.41 18.36 5.64" />
           </svg>
           <span class="text-2xl font-semibold">我是駕駛</span>
         </button>
-        <!-- 救護車按鈕 -->
-        <button id="select-ambulance-btn" class="flex-1 rounded-2xl bg-red-600 p-8 text-white transition-all hover:bg-red-500 hover:shadow-2xl hover:-translate-y-1">
+        <!-- 救護車按鈕 --><button id="select-ambulance-btn" class="flex-1 rounded-2xl bg-red-600 p-8 text-white transition-all hover:bg-red-500 hover:shadow-2xl hover:-translate-y-1">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
           </svg>
@@ -85,26 +82,20 @@
       </div>
     </div>
 
-    <!-- 駕駛模式畫面 (預設隱藏) -->
-    <div id="driver-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
-      <!-- 標題和返回按鈕 -->
-      <div class="w-full flex items-center justify-between pt-4">
+    <!-- 駕駛模式畫面 (預設隱藏) --><div id="driver-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 --><div class="w-full flex items-center justify-between pt-4">
         <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
         <h1 class="text-2xl font-bold text-blue-300">駕駛模式</h1>
-        <div class="w-8"></div> <!-- 占位符保持標題居中 -->
-      </div>
+        <div class="w-8"></div> <!-- 占位符保持標題居中 --></div>
       
-      <!-- 狀態顯示器 -->
-      <div class="flex-1 flex items-center justify-center -mt-16">
+      <!-- 狀態顯示器 --><div class="flex-1 flex items-center justify-center -mt-16">
         <div id="driver-status-display" class="relative flex items-center justify-center w-64 h-64 sm:w-80 sm:h-80 rounded-full transition-all duration-300 bg-green-500 shadow-green-glow">
-          <!-- 狀態內容會由 JS 動態切換 -->
-          <div id="driver-status-content">
-            <!-- 安全狀態 (預設) -->
-            <div class="text-center">
+          <!-- 狀態內容會由 JS 動態切換 --><div id="driver-status-content">
+            <!-- 安全狀態 (預設) --><div class="text-center">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 text-green-200">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
               </svg>
@@ -115,8 +106,7 @@
         </div>
       </div>
 
-      <!-- 模擬控制面板 -->
-      <div class="w-full pb-6">
+      <!-- 模擬控制面板 --><div class="w-full pb-6">
         <h3 class="text-lg text-center text-gray-400 mb-4">模擬情境控制</h3>
         <div class="grid grid-cols-2 gap-4">
           <button id="simulate-right-btn" class="rounded-lg bg-yellow-600 p-4 text-white font-semibold transition-transform hover:scale-105">
@@ -132,36 +122,30 @@
       </div>
     </div>
 
-    <!-- 救護車模式畫面 (預設隱藏) -->
-    <div id="ambulance-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
-      <!-- 標題和返回按鈕 -->
-      <div class="w-full flex items-center justify-between pt-4">
+    <!-- 救護車模式畫面 (預設隱藏) --><div id="ambulance-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 --><div class="w-full flex items-center justify-between pt-4">
         <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
           </svg>
         </button>
         <h1 class="text-2xl font-bold text-red-300">救護車模式</h1>
-        <div class="w-8"></div> <!-- 占位符 -->
-      </div>
+        <div class="w-8"></div> <!-- 占位符 --></div>
       
-      <!-- 廣播按鈕和狀態 -->
-      <div class="flex-1 flex flex-col items-center justify-center -mt-16 gap-6">
+      <!-- 廣播按鈕和狀態 --><div class="flex-1 flex flex-col items-center justify-center -mt-16 gap-6">
         <p class="text-xl text-gray-300">廣播狀態：</p>
         <p id="broadcast-status-text" class="text-3xl font-bold text-gray-500">
           廣播已停止
         </p>
         
         <div id="broadcast-icon-container" class="w-64 h-64 rounded-full bg-gray-700 flex items-center justify-center">
-          <!-- 停止狀態 (預設) -->
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M18.388,8.288c0.43,0.113,0.835,0.285,1.213,0.512c-0.84,2.94-3.468,5.175-6.574,5.175c-3.106,0-5.734-2.235-6.574-5.175c0.378-0.227,0.783-0.398,1.213-0.512M12,18.75c-6.027,0-10.938-4.912-10.938-10.938c0-6.027,4.912-10.938,10.938-10.938c6.027,0,10.938,4.912,10.938,10.938C22.938,13.838,18.027,18.75,12,18.75z M12,3.375c-4.613,0-8.363,3.75-8.363,8.363c0,4.613,3.75,8.363,8.363,8.363c4.613,0,8.363-3.75,8.363-8.363C20.363,7.125,16.613,3.375,12,3.375z" />
+          <!-- 停止狀態 (預設) - 喇叭靜音圖示 --><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
           </svg>
         </div>
       </div>
 
-      <!-- 控制按鈕 -->
-      <div class="w-full pb-6">
+      <!-- 控制按鈕 --><div class="w-full pb-6">
         <button id="toggle-broadcast-btn" class="w-full rounded-lg p-6 text-2xl font-bold text-white transition-colors bg-red-700 hover:bg-red-600">
           開始廣播
         </button>
@@ -345,8 +329,11 @@
           broadcastIconContainer.classList.remove('bg-gray-700');
           broadcastIconContainer.classList.add('bg-red-600', 'animate-pulse-strong');
           broadcastIconContainer.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-white">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 11.976c.94-3.393 4.22-6 8.25-6s7.31 2.607 8.25 6M3.75 11.976c-.94 3.393-4.22 6-8.25 6S.69 15.369 0 11.976m3.75 0h16.5m-16.5 0a1.5 1.5 0 0 0-1.5 1.5v3.75a1.5 1.5 0 0 0 1.5 1.5h16.5a1.5 1.5 0 0 0 1.5-1.5v-3.75a1.5 1.5 0 0 0-1.5-1.5m-16.5 0v-3.75a1.5 1.5 0 0 1 1.5-1.5h16.5a1.5 1.5 0 0 1 1.5 1.5v3.75m-16.5 0a1.5 1.5 0 0 1-1.5-1.5V8.226c0-3.393 3.28-6 7.31-6s7.31 2.607 7.31 6v3.75a1.5 1.5 0 0 1-1.5 1.5m-16.5 0h16.5" />
+            <!-- 廣播中 - 簡單同心圓訊號圖示 --><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-white">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v.01" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
             </svg>
           `;
           
@@ -363,8 +350,8 @@
           broadcastIconContainer.classList.add('bg-gray-700');
           broadcastIconContainer.classList.remove('bg-red-600', 'animate-pulse-strong');
           broadcastIconContainer.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M18.388,8.288c0.43,0.113,0.835,0.285,1.213,0.512c-0.84,2.94-3.468,5.175-6.574,5.175c-3.106,0-5.734-2.235-6.574-5.175c0.378-0.227,0.783-0.398,1.213-0.512M12,18.75c-6.027,0-10.938-4.912-10.938-10.938c0-6.027,4.912-10.938,10.938-10.938c6.027,0,10.938,4.912,10.938,10.938C22.938,13.838,18.027,18.75,12,18.75z M12,3.375c-4.613,0-8.363,3.75-8.363,8.363c0,4.613,3.75,8.363,8.363,8.363c4.613,0,8.363-3.75,8.363-8.363C20.363,7.125,16.613,3.375,12,3.375z" />
+            <!-- 停止廣播 - 喇叭靜音圖示 --><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
             </svg>
           `;
 
@@ -375,9 +362,6 @@
       }
 
       toggleBroadcastBtn.addEventListener('click', toggleBroadcast);
-
-      // 初始設定 (不再需要，因為 HTML 預設就是 selection-view)
-      // setAppMode('selection'); 
 
     });
   </script>
