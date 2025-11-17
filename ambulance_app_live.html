@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>救護車避讓 (即時GPS版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    }
+    .shadow-green-glow {
+      box-shadow: 0 0 30px 10px rgba(74, 222, 128, 0.5);
+    }
+    .shadow-red-glow {
+      box-shadow: 0 0 40px 15px rgba(239, 68, 68, 0.6);
+    }
+    @keyframes pulse-strong {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.05); }
+    }
+    .animate-pulse-strong {
+      animation: pulse-strong 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes ping-slow {
+      0% { transform: scale(1); opacity: 1; }
+      75%, 100% { transform: scale(1.5); opacity: 0; }
+    }
+    .animate-ping-slow {
+      animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    /* 讓 GPS 狀態文字換行 */
+    .gps-status {
+      font-size: 0.9rem;
+      color: #9ca3af; /* text-gray-400 */
+      word-break: break-all;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white overflow-hidden">
+
+  <!-- App 容器 -->
+  <div id="app-container" class="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-gray-900 p-6 font-sans">
+
+    <!-- 模式選擇畫面 (預設顯示) -->
+    <div id="selection-view" class="flex flex-col items-center gap-8 w-full">
+      <h1 class="text-3xl font-bold text-center text-blue-300">救護車避讓通知系統</h1>
+      <h2 class="text-xl text-center text-gray-400">(即時GPS版)</h2>
+      <div class="flex flex-col sm:flex-row gap-6 w-full max-w-md mt-4">
+        <!-- 駕駛按鈕 -->
+        <button id="select-driver-btn" class="flex-1 rounded-2xl bg-blue-600 p-8 text-white transition-all hover:bg-blue-500 hover:shadow-2xl hover:-translate-y-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 12m-9 0a9 9 0 1 1 18 0 9 9 0 0 1-18 0Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 12m-2.25 0a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 14.25V21" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.41 10.41 5.64 5.64" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.59 10.41 18.36 5.64" />
+          </svg>
+          <span class="text-2xl font-semibold">我是駕駛</span>
+        </button>
+        <!-- 救護車按鈕 -->
+        <button id="select-ambulance-btn" class="flex-1 rounded-2xl bg-red-600 p-8 text-white transition-all hover:bg-red-500 hover:shadow-2xl hover:-translate-y-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span class="text-2xl font-semibold">我是救護車</span>
+        </button>
+      </div>
+      <div class="mt-4 p-4 rounded-lg bg-gray-800 text-sm text-gray-300 max-w-md">
+        <p>🔴 <span class="font-bold">重要提示：</span>這是一個使用即時 GPS 的原型。您需要**兩台手機** (一台設為救護車，一台設為駕駛) 並允許 GPS 權限才能進行測試。</p>
+        <p id="auth-status" class="text-yellow-400 text-center mt-2">正在連線至伺服器...</p>
+      </div>
+    </div>
+
+    <!-- 駕駛模式畫面 (預設隱藏) -->
+    <div id="driver-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 -->
+      <div class="w-full flex items-center justify-between pt-4">
+        <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <h1 class="text-2xl font-bold text-blue-300">駕駛模式</h1>
+        <div class="w-8"></div>
+      </div>
+      
+      <!-- 狀態顯示器 -->
+      <div class="flex-1 flex items-center justify-center -mt-16">
+        <div id="driver-status-display" class="relative flex items-center justify-center w-64 h-64 sm:w-80 sm:h-80 rounded-full transition-all duration-300 bg-green-500 shadow-green-glow">
+          <div id="driver-status-content">
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 text-green-200">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span class="text-5xl font-extrabold">安全</span>
+              <p class="text-lg text-green-200 mt-2">周圍無狀況</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPS 狀態面板 -->
+      <div class="w-full pb-6 text-center">
+        <h3 class="text-lg text-center text-gray-300 mb-2">即時位置資訊</h3>
+        <div class="bg-gray-800 p-4 rounded-lg text-left">
+          <p class="gps-status">我的位置: <span id="driver-my-location" class="text-white">正在取得...</span></p>
+          <p class="gps-status mt-2">救護車位置: <span id="driver-ambulance-location" class="text-white">尚未偵測到</span></p>
+          <p class="text-xl font-bold text-center mt-3">距離: <span id="driver-distance" class="text-yellow-400">---</span></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 救護車模式畫面 (預設隱藏) -->
+    <div id="ambulance-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 -->
+      <div class="w-full flex items-center justify-between pt-4">
+        <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <h1 class="text-2xl font-bold text-red-300">救護車模式</h1>
+        <div class="w-8"></div>
+      </div>
+      
+      <!-- 廣播按鈕和狀態 -->
+      <div class="flex-1 flex flex-col items-center justify-center -mt-16 gap-6">
+        <p class="text-xl text-gray-300">廣播狀態：</p>
+        <p id="broadcast-status-text" class="text-3xl font-bold text-gray-500">
+          廣播已停止
+        </p>
+        
+        <div id="broadcast-icon-container" class="w-64 h-64 rounded-full bg-gray-700 flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- GPS 狀態 -->
+      <div class="w-full pb-6 text-center">
+        <div class="bg-gray-800 p-4 rounded-lg text-left">
+          <p class="gps-status">我的位置: <span id="ambulance-my-location" class="text-white">正在取得...</span></p>
+        </div>
+        <!-- 新增：目的地輸入框 (模擬) -->
+        <div class="mt-4 text-left">
+          <label for="destination" class="block text-sm font-medium text-gray-300 mb-1">輸入目的地 (模擬):</label>
+          <input type="text" id="destination" class="w-full rounded-lg p-2 bg-gray-700 text-white border border-gray-600" placeholder="例如：XX醫院 (此功能為模擬)">
+        </div>
+        <button id="toggle-broadcast-btn" class="w-full mt-4 rounded-lg p-6 text-2xl font-bold text-white transition-colors bg-red-700 hover:bg-red-600">
+          開始廣播
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 載入 Firebase BARE SDK -->
+  <script type="module">
+    // ---------------------------------------------------
+    // 警告：這是一個公開的 Firebase 實例，僅供原型測試。
+    // 請勿在生產環境中使用此配置。
+    // ---------------------------------------------------
+    const firebaseConfig = JSON.parse(atob("eyJhcGlLZXkiOiJBSXphU3lEc2pmejVqOThVOUgxN0JidklLMy1qMUtzcHh3TjFYb2MiLCJhdXRoRG9tYWluIjoiZ2VtaW5pLWFtYnVsYW5jZS1hcHAuZmlyZWJhc2VhcHAuY29tIiwicHJvamVjdElkIjoiZ2VtaW5pLWFtYnVsYW5jZS1hcHAiLCJzdG9yYWdlQnVja2V0IjoiZ2VtaW5pLWFtYnVsYW5jZS1hcHAuYXBwc3BvdC5jb20iLCJtZXNzYWdpbmdTZW5kZXJJZCI6IjY4ODkwNTU1MzYyMSIsImFwcElkIjoiMToxMTEyMzA3NzkzMTU5OndlYjo0ZWE5YTA5YjdlZjNlMGEyMWExMWU0In0="));
+
+    // 匯入 Firebase 模組
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getAuth, 
+      signInAnonymously, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      deleteDoc, 
+      onSnapshot, 
+      serverTimestamp,
+      setLogLevel
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // Firebase 初始化
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+      setLogLevel('error'); // 關閉詳細日誌
+
+      let userId = null;
+      // 這裡的 App ID 僅用於區分不同測試者的數據
+      const appId = 'prototype-v1'; 
+      let ambulanceDocRef = null;
+
+      // 狀態變數
+      let appMode = 'selection';
+      let notification = null;
+      let isBroadcasting = false;
+
+      // GPS 監聽器 ID
+      let driverGpsWatcher = null;
+      let ambulanceGpsWatcher = null;
+      let ambulanceListener = null; // Firestore 監聽器
+
+      // 位置變數
+      let myDriverLocation = null;
+      let ambulanceDbLocation = null;
+
+      // 語音合成
+      const synth = window.speechSynthesis;
+      let currentUtterance = null;
+      const ALERT_DISTANCE_METERS = 500; // 500 公尺警報
+
+      // 獲取 DOM 元素
+      const selectionView = document.getElementById('selection-view');
+      const driverView = document.getElementById('driver-view');
+      const ambulanceView = document.getElementById('ambulance-view');
+      
+      const authStatus = document.getElementById('auth-status');
+      const selectDriverBtn = document.getElementById('select-driver-btn');
+      const selectAmbulanceBtn = document.getElementById('select-ambulance-btn');
+      const goBackBtns = document.querySelectorAll('.go-back-btn');
+
+      // 駕駛模式元素
+      const driverStatusDisplay = document.getElementById('driver-status-display');
+      const driverStatusContent = document.getElementById('driver-status-content');
+      const driverMyLocation = document.getElementById('driver-my-location');
+      const driverAmbulanceLocation = document.getElementById('driver-ambulance-location');
+      const driverDistance = document.getElementById('driver-distance');
+
+      // 救護車模式元素
+      const broadcastStatusText = document.getElementById('broadcast-status-text');
+      const broadcastIconContainer = document.getElementById('broadcast-icon-container');
+      const toggleBroadcastBtn = document.getElementById('toggle-broadcast-btn');
+      const ambulanceMyLocation = document.getElementById('ambulance-my-location');
+
+      // -----------------
+      // Firebase 認證
+      // -----------------
+      signInAnonymously(auth).catch((error) => {
+        console.error("匿名登入失敗:", error);
+        authStatus.textContent = "伺服器連線失敗。";
+      });
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          userId = user.uid;
+          authStatus.textContent = "伺服器連線成功！";
+          // 設置 Firestore 文檔參照
+          // 為了讓所有用戶都能看到，我們使用一個公共路徑
+          ambulanceDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'ambulance', 'live_location');
+        } else {
+          userId = null;
+          authStatus.textContent = "已斷線。";
+        }
+      });
+
+      // -----------------
+      // 畫面切換邏輯
+      // -----------------
+
+      function setAppMode(mode) {
+        appMode = mode;
+        selectionView.style.display = 'none';
+        driverView.style.display = 'none';
+        ambulanceView.style.display = 'none';
+
+        // 停止所有 GPS 和監聽器
+        stopDriverMode();
+        stopAmbulanceMode();
+
+        if (mode === 'selection') {
+          selectionView.style.display = 'flex';
+          resetAlert(); // 返回時重設警報
+        } else if (mode === 'driver') {
+          driverView.style.display = 'flex';
+          startDriverMode(); // 啟動駕駛模式
+        } else if (mode === 'ambulance') {
+          ambulanceView.style.display = 'flex';
+          // 救護車模式由按鈕啟動，這裡只切換畫面
+          updateAmbulanceGpsUi('正在取得...');
+        }
+      }
+
+      selectDriverBtn.addEventListener('click', () => setAppMode('driver'));
+      selectAmbulanceBtn.addEventListener('click', () => setAppMode('ambulance'));
+
+      goBackBtns.forEach(btn => {
+        btn.addEventListener('click', () => setAppMode('selection'));
+      });
+
+      // -----------------
+      // 語音播放邏輯
+      // -----------------
+
+      function speak(text) {
+        if (!synth) {
+          console.error('瀏覽器不支持語音合成！');
+          updateDriverStatus('語音合成失敗');
+          return;
+        }
+        if (synth.speaking) synth.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-TW';
+        utterance.rate = 1.1;
+        utterance.pitch = 1.2;
+        utterance.volume = 1;
+        utterance.onend = () => { currentUtterance = null; };
+        currentUtterance = utterance;
+        synth.speak(utterance);
+      }
+      
+      // -----------------
+      // 駕駛模式邏輯
+      // -----------------
+
+      function startDriverMode() {
+        if (!navigator.geolocation) {
+          updateDriverGpsUi('瀏覽器不支持 GPS');
+          return;
+        }
+        
+        // 1. 開始監聽自己的 GPS
+        updateDriverGpsUi('正在取得...');
+        driverGpsWatcher = navigator.geolocation.watchPosition(
+          updateDriverPosition, 
+          handleGpsError, 
+          { enableHighAccuracy: true }
+        );
+
+        // 2. 開始監聽 Firebase 上的救護車位置
+        if (ambulanceListener) ambulanceListener(); // 確保舊的監聽器已移除
+        
+        ambulanceListener = onSnapshot(ambulanceDocRef, (doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            // 檢查時間戳，如果太舊 (例如超過30秒) 就不顯示
+            const now = new Date();
+            const timestamp = data.timestamp ? data.timestamp.toDate() : new Date(0);
+            if ((now - timestamp) < 30000) {
+              ambulanceDbLocation = { lat: data.latitude, lon: data.longitude };
+              driverAmbulanceLocation.textContent = `${data.latitude.toFixed(4)}, ${data.longitude.toFixed(4)}`;
+              checkDistance();
+            } else {
+              driverAmbulanceLocation.textContent = "訊號過舊";
+              ambulanceDbLocation = null;
+              checkDistance();
+            }
+          } else {
+            driverAmbulanceLocation.textContent = "尚未偵測到";
+            ambulanceDbLocation = null;
+            checkDistance();
+          }
+        }, (error) => {
+          console.error("監聽救護車位置失敗:", error);
+          driverAmbulanceLocation.textContent = "監聽失敗";
+        });
+      }
+      
+      function stopDriverMode() {
+        if (driverGpsWatcher) {
+          navigator.geolocation.clearWatch(driverGpsWatcher);
+          driverGpsWatcher = null;
+        }
+        if (ambulanceListener) {
+          ambulanceListener(); // 停止監聽
+          ambulanceListener = null;
+        }
+        myDriverLocation = null;
+        ambulanceDbLocation = null;
+      }
+
+      function updateDriverPosition(pos) {
+        myDriverLocation = { 
+          lat: pos.coords.latitude, 
+          lon: pos.coords.longitude 
+        };
+        updateDriverGpsUi(`${myDriverLocation.lat.toFixed(4)}, ${myDriverLocation.lon.toFixed(4)}`);
+        checkDistance();
+      }
+
+      function updateDriverGpsUi(text) {
+        driverMyLocation.textContent = text;
+      }
+
+      function handleGpsError(error) {
+        let msg = 'GPS 錯誤';
+        if (error.code === 1) msg = 'GPS 已被拒絕';
+        if (error.code === 2) msg = '無法取得位置';
+        if (error.code === 3) msg = 'GPS 請求超時';
+        updateDriverGpsUi(msg);
+        updateAmbulanceGpsUi(msg);
+      }
+
+      function checkDistance() {
+        if (!myDriverLocation || !ambulanceDbLocation) {
+          driverDistance.textContent = "---";
+          if (notification) resetAlert(); // 如果任一位置消失，解除警報
+          return;
+        }
+
+        const dist = haversineDistance(
+          myDriverLocation.lat, myDriverLocation.lon,
+          ambulanceDbLocation.lat, ambulanceDbLocation.lon
+        );
+        
+        driverDistance.textContent = `${dist.toFixed(0)} 公尺`;
+
+        if (dist < ALERT_DISTANCE_METERS && !notification) {
+          // 進入警報範圍
+          triggerAlert('approach');
+        } else if (dist >= ALERT_DISTANCE_METERS && notification) {
+          // 離開警報範圍
+          resetAlert();
+        }
+      }
+
+      function updateDriverStatus(newNotification) {
+        notification = newNotification;
+        if (notification) {
+          driverStatusDisplay.classList.remove('bg-green-500', 'shadow-green-glow');
+          driverStatusDisplay.classList.add('bg-red-600', 'shadow-red-glow', 'animate-pulse');
+          driverStatusContent.innerHTML = `
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 animate-ping-slow">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <span class="text-4xl font-extrabold">${notification}</span>
+            </div>
+          `;
+        } else {
+          driverStatusDisplay.classList.add('bg-green-500', 'shadow-green-glow');
+          driverStatusDisplay.classList.remove('bg-red-600', 'shadow-red-glow', 'animate-pulse');
+          driverStatusContent.innerHTML = `
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 text-green-200">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span class="text-5xl font-extrabold">安全</span>
+              <p class="text-lg text-green-200 mt-2">周圍無狀況</p>
+            </div>
+          `;
+        }
+      }
+      
+      function triggerAlert(type) {
+        let textToSpeak = '';
+        if (type === 'approach') {
+          // 依照您的要求，更新通知文字
+          textToSpeak = '救護車位於後方，請靠邊';
+        }
+        
+        updateDriverStatus(textToSpeak);
+        speak(textToSpeak);
+      }
+
+      function resetAlert() {
+        updateDriverStatus(null);
+        if (currentUtterance) synth.cancel();
+      }
+
+      // -----------------
+      // 救護車模式邏輯
+      // -----------------
+
+      function toggleBroadcast() {
+        isBroadcasting = !isBroadcasting;
+        
+        if (isBroadcasting) {
+          // 開始廣播
+          startAmbulanceMode();
+          broadcastStatusText.textContent = '正在廣播位置';
+          broadcastStatusText.classList.remove('text-gray-500');
+          broadcastStatusText.classList.add('text-green-400');
+
+          broadcastIconContainer.classList.remove('bg-gray-700');
+          broadcastIconContainer.classList.add('bg-red-600', 'animate-pulse-strong');
+          broadcastIconContainer.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-white">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9.75v.01" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+            </svg>
+          `;
+          toggleBroadcastBtn.textContent = '停止廣播';
+          toggleBroadcastBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
+          toggleBroadcastBtn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+
+        } else {
+          // 停止廣播
+          stopAmbulanceMode();
+          broadcastStatusText.textContent = '廣播已停止';
+          broadcastStatusText.classList.add('text-gray-500');
+          broadcastStatusText.classList.remove('text-green-400');
+
+          broadcastIconContainer.classList.add('bg-gray-700');
+          broadcastIconContainer.classList.remove('bg-red-600', 'animate-pulse-strong');
+          broadcastIconContainer.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17.25 9.75 19.5 12m0 0 2.25 2.25M19.5 12l2.25-2.25M19.5 12l-2.25 2.25m-10.5-6 4.72-4.72a.75.75 0 0 1 1.28.53v15.88a.75.75 0 0 1-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.009 9.009 0 0 1 2.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75Z" />
+            </svg>
+          `;
+          toggleBroadcastBtn.textContent = '開始廣播';
+          toggleBroadcastBtn.classList.add('bg-red-700', 'hover:bg-red-600');
+          toggleBroadcastBtn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+        }
+      }
+
+      function startAmbulanceMode() {
+        if (!navigator.geolocation) {
+          updateAmbulanceGpsUi('瀏覽器不支持 GPS');
+          return;
+        }
+        updateAmbulanceGpsUi('正在取得...');
+        ambulanceGpsWatcher = navigator.geolocation.watchPosition(
+          updateAmbulancePosition, 
+          handleGpsError, 
+          { enableHighAccuracy: true }
+        );
+      }
+
+      function stopAmbulanceMode() {
+        if (ambulanceGpsWatcher) {
+          navigator.geolocation.clearWatch(ambulanceGpsWatcher);
+          ambulanceGpsWatcher = null;
+        }
+        // 從資料庫刪除位置，以免其他駕駛收到舊資訊
+        if (ambulanceDocRef) {
+          deleteDoc(ambulanceDocRef).catch(e => console.warn("刪除文檔失敗:", e));
+        }
+        updateAmbulanceGpsUi('廣播已停止');
+        
+        // 如果按鈕狀態不一致，同步它
+        if (isBroadcasting) {
+          toggleBroadcast(); 
+        }
+      }
+
+      function updateAmbulancePosition(pos) {
+        const location = { 
+          lat: pos.coords.latitude, 
+          lon: pos.coords.longitude 
+        };
+        updateAmbulanceGpsUi(`${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}`);
+
+        // 將位置寫入 Firebase
+        if (ambulanceDocRef) {
+          setDoc(ambulanceDocRef, {
+            latitude: location.lat,
+            longitude: location.lon,
+            timestamp: serverTimestamp() // 使用伺服器時間戳
+          }).catch(e => {
+            console.error("寫入 Firestore 失敗:", e);
+            updateAmbulanceGpsUi("廣播失敗");
+          });
+        }
+      }
+
+      function updateAmbulanceGpsUi(text) {
+        ambulanceMyLocation.textContent = text;
+      }
+
+      toggleBroadcastBtn.addEventListener('click', toggleBroadcast);
+
+      // -----------------
+      // 輔助函式：計算距離
+      // -----------------
+      function haversineDistance(lat1, lon1, lat2, lon2) {
+        const R = 6371e3; // 地球半徑（公尺）
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c; // 距離 (公尺)
+      }
+
+    });
+  </script>
+</body>
+</html>
