@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>救護車避讓通知 (原型)</title>
+  <!-- 載入 Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 Inter 字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 設置中英文字體 */
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    }
+
+    /* 隱藏視圖的 class (已移除) */
+    /* .hidden-view { ... } */
+
+    /* 發光效果 */
+    .shadow-green-glow {
+      box-shadow: 0 0 30px 10px rgba(74, 222, 128, 0.5);
+    }
+    .shadow-red-glow {
+      box-shadow: 0 0 40px 15px rgba(239, 68, 68, 0.6);
+    }
+
+    /* 自定義動畫 */
+    @keyframes pulse-strong {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+      }
+    }
+    .animate-pulse-strong {
+      animation: pulse-strong 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    @keyframes ping-slow {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      75%, 100% {
+        transform: scale(1.5);
+        opacity: 0;
+      }
+    }
+    .animate-ping-slow {
+      animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white overflow-hidden">
+
+  <!-- App 容器 -->
+  <div id="app-container" class="relative flex h-screen w-full flex-col items-center justify-center overflow-hidden bg-gray-900 p-6 font-sans">
+
+    <!-- 模式選擇畫面 (預設顯示) -->
+    <div id="selection-view" class="flex flex-col items-center gap-8 w-full">
+      <h1 class="text-3xl font-bold text-center text-blue-300">救護車避讓通知系統</h1>
+      <h2 class="text-xl text-center text-gray-400">請選擇您的角色：</h2>
+      <div class="flex flex-col sm:flex-row gap-6 w-full max-w-md">
+        <!-- 駕駛按鈕 -->
+        <button id="select-driver-btn" class="flex-1 rounded-2xl bg-blue-600 p-8 text-white transition-all hover:bg-blue-500 hover:shadow-2xl hover:-translate-y-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 20.25h-5.25A2.25 2.25 0 0 1 .75 18V6.75A2.25 2.25 0 0 1 3 4.5h18a2.25 2.25 0 0 1 2.25 2.25v1.5M7.5 4.5v.75m-3.75 0h16.5M13.5 12h-3V9m0 3h3m0 0v3h-3v-3m9 3.75h3l-1.5-1.5-1.5 1.5Z" />
+          </svg>
+          <span class="text-2xl font-semibold">我是駕駛</span>
+        </button>
+        <!-- 救護車按鈕 -->
+        <button id="select-ambulance-btn" class="flex-1 rounded-2xl bg-red-600 p-8 text-white transition-all hover:bg-red-500 hover:shadow-2xl hover:-translate-y-1">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mx-auto mb-4">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span class="text-2xl font-semibold">我是救護車</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 駕駛模式畫面 (預設隱藏) -->
+    <div id="driver-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 -->
+      <div class="w-full flex items-center justify-between pt-4">
+        <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <h1 class="text-2xl font-bold text-blue-300">駕駛模式</h1>
+        <div class="w-8"></div> <!-- 占位符保持標題居中 -->
+      </div>
+      
+      <!-- 狀態顯示器 -->
+      <div class="flex-1 flex items-center justify-center -mt-16">
+        <div id="driver-status-display" class="relative flex items-center justify-center w-64 h-64 sm:w-80 sm:h-80 rounded-full transition-all duration-300 bg-green-500 shadow-green-glow">
+          <!-- 狀態內容會由 JS 動態切換 -->
+          <div id="driver-status-content">
+            <!-- 安全狀態 (預設) -->
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 text-green-200">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span class="text-5xl font-extrabold">安全</span>
+              <p class="text-lg text-green-200 mt-2">周圍無狀況</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 模擬控制面板 -->
+      <div class="w-full pb-6">
+        <h3 class="text-lg text-center text-gray-400 mb-4">模擬情境控制</h3>
+        <div class="grid grid-cols-2 gap-4">
+          <button id="simulate-right-btn" class="rounded-lg bg-yellow-600 p-4 text-white font-semibold transition-transform hover:scale-105">
+            模擬：救護車在後方<br>(同向行駛)
+          </button>
+          <button id="simulate-stop-btn" class="rounded-lg bg-red-600 p-4 text-white font-semibold transition-transform hover:scale-105">
+            模擬：救護車將穿越<br>(交叉路口)
+          </button>
+        </div>
+        <button id="reset-alert-btn" disabled class="w-full mt-4 rounded-lg bg-gray-600 p-4 text-white font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-500">
+          重設 (解除警報)
+        </button>
+      </div>
+    </div>
+
+    <!-- 救護車模式畫面 (預設隱藏) -->
+    <div id="ambulance-view" class="flex flex-col items-center justify-between h-full w-full max-w-md" style="display: none;">
+      <!-- 標題和返回按鈕 -->
+      <div class="w-full flex items-center justify-between pt-4">
+        <button class="go-back-btn p-2 rounded-full hover:bg-gray-700 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+        </button>
+        <h1 class="text-2xl font-bold text-red-300">救護車模式</h1>
+        <div class="w-8"></div> <!-- 占位符 -->
+      </div>
+      
+      <!-- 廣播按鈕和狀態 -->
+      <div class="flex-1 flex flex-col items-center justify-center -mt-16 gap-6">
+        <p class="text-xl text-gray-300">廣播狀態：</p>
+        <p id="broadcast-status-text" class="text-3xl font-bold text-gray-500">
+          廣播已停止
+        </p>
+        
+        <div id="broadcast-icon-container" class="w-64 h-64 rounded-full bg-gray-700 flex items-center justify-center">
+          <!-- 停止狀態 (預設) -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.388,8.288c0.43,0.113,0.835,0.285,1.213,0.512c-0.84,2.94-3.468,5.175-6.574,5.175c-3.106,0-5.734-2.235-6.574-5.175c0.378-0.227,0.783-0.398,1.213-0.512M12,18.75c-6.027,0-10.938-4.912-10.938-10.938c0-6.027,4.912-10.938,10.938-10.938c6.027,0,10.938,4.912,10.938,10.938C22.938,13.838,18.027,18.75,12,18.75z M12,3.375c-4.613,0-8.363,3.75-8.363,8.363c0,4.613,3.75,8.363,8.363,8.363c4.613,0,8.363-3.75,8.363-8.363C20.363,7.125,16.613,3.375,12,3.375z" />
+          </svg>
+        </div>
+      </div>
+
+      <!-- 控制按鈕 -->
+      <div class="w-full pb-6">
+        <button id="toggle-broadcast-btn" class="w-full rounded-lg p-6 text-2xl font-bold text-white transition-colors bg-red-700 hover:bg-red-600">
+          開始廣播
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // 狀態變數
+      let appMode = 'selection';
+      let notification = null;
+      let isBroadcasting = false;
+
+      // 語音合成
+      const synth = window.speechSynthesis;
+      let currentUtterance = null;
+
+      // 獲取 DOM 元素
+      const selectionView = document.getElementById('selection-view');
+      const driverView = document.getElementById('driver-view');
+      const ambulanceView = document.getElementById('ambulance-view');
+      
+      const selectDriverBtn = document.getElementById('select-driver-btn');
+      const selectAmbulanceBtn = document.getElementById('select-ambulance-btn');
+      const goBackBtns = document.querySelectorAll('.go-back-btn');
+
+      // 駕駛模式元素
+      const driverStatusDisplay = document.getElementById('driver-status-display');
+      const driverStatusContent = document.getElementById('driver-status-content');
+      const simulateRightBtn = document.getElementById('simulate-right-btn');
+      const simulateStopBtn = document.getElementById('simulate-stop-btn');
+      const resetAlertBtn = document.getElementById('reset-alert-btn');
+
+      // 救護車模式元素
+      const broadcastStatusText = document.getElementById('broadcast-status-text');
+      const broadcastIconContainer = document.getElementById('broadcast-icon-container');
+      const toggleBroadcastBtn = document.getElementById('toggle-broadcast-btn');
+
+      // -----------------
+      // 畫面切換邏輯
+      // -----------------
+
+      function setAppMode(mode) {
+        appMode = mode;
+        // 隱藏所有視圖
+        selectionView.style.display = 'none';
+        driverView.style.display = 'none';
+        ambulanceView.style.display = 'none';
+
+        // 顯示目標視圖
+        if (mode === 'selection') {
+          selectionView.style.display = 'flex'; // 這些都是 flex 容器
+        } else if (mode === 'driver') {
+          driverView.style.display = 'flex';
+        } else if (mode === 'ambulance') {
+          ambulanceView.style.display = 'flex';
+        }
+      }
+
+      selectDriverBtn.addEventListener('click', () => setAppMode('driver'));
+      selectAmbulanceBtn.addEventListener('click', () => setAppMode('ambulance'));
+
+      goBackBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          setAppMode('selection');
+          // 重設狀態
+          resetAlert();
+          if (isBroadcasting) {
+            toggleBroadcast();
+          }
+        });
+      });
+
+      // -----------------
+      // 語音播放邏輯
+      // -----------------
+
+      function speak(text) {
+        if (!synth) {
+          console.error('瀏覽器不支持語音合成！');
+          updateDriverStatus('語音合成失敗');
+          return;
+        }
+
+        if (synth.speaking) {
+          synth.cancel();
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'zh-TW';
+        utterance.rate = 1.1;
+        utterance.pitch = 1.2;
+        utterance.volume = 1;
+
+        utterance.onend = () => {
+          currentUtterance = null;
+        };
+
+        currentUtterance = utterance;
+        synth.speak(utterance);
+      }
+      
+      // -----------------
+      // 駕駛模式邏輯
+      // -----------------
+
+      function updateDriverStatus(newNotification) {
+        notification = newNotification;
+
+        if (notification) {
+          // 警報狀態
+          driverStatusDisplay.classList.remove('bg-green-500', 'shadow-green-glow');
+          driverStatusDisplay.classList.add('bg-red-600', 'shadow-red-glow', 'animate-pulse');
+          
+          driverStatusContent.innerHTML = `
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 animate-ping-slow">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <span class="text-5xl font-extrabold">${notification}</span>
+            </div>
+          `;
+          resetAlertBtn.disabled = false;
+        } else {
+          // 安全狀態
+          driverStatusDisplay.classList.add('bg-green-500', 'shadow-green-glow');
+          driverStatusDisplay.classList.remove('bg-red-600', 'shadow-red-glow', 'animate-pulse');
+          
+          driverStatusContent.innerHTML = `
+            <div class="text-center">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-24 h-24 mx-auto mb-4 text-green-200">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+              </svg>
+              <span class="text-5xl font-extrabold">安全</span>
+              <p class="text-lg text-green-200 mt-2">周圍無狀況</p>
+            </div>
+          `;
+          resetAlertBtn.disabled = true;
+        }
+      }
+      
+      function simulateAlert(type) {
+        let textToSpeak = '';
+        if (type === 'moveRight') {
+          textToSpeak = '請靠右';
+        } else if (type === 'stop') {
+          textToSpeak = '請停駛';
+        }
+        
+        updateDriverStatus(textToSpeak);
+        speak(textToSpeak);
+      }
+
+      function resetAlert() {
+        updateDriverStatus(null);
+        if (currentUtterance) {
+          synth.cancel();
+        }
+      }
+
+      simulateRightBtn.addEventListener('click', () => simulateAlert('moveRight'));
+      simulateStopBtn.addEventListener('click', () => simulateAlert('stop'));
+      resetAlertBtn.addEventListener('click', resetAlert);
+
+      // -----------------
+      // 救護車模式邏輯
+      // -----------------
+
+      function toggleBroadcast() {
+        isBroadcasting = !isBroadcasting;
+
+        if (isBroadcasting) {
+          // 開始廣播
+          broadcastStatusText.textContent = '正在廣播位置';
+          broadcastStatusText.classList.remove('text-gray-500');
+          broadcastStatusText.classList.add('text-green-400');
+
+          broadcastIconContainer.classList.remove('bg-gray-700');
+          broadcastIconContainer.classList.add('bg-red-600', 'animate-pulse-strong');
+          broadcastIconContainer.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-white">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 11.976c.94-3.393 4.22-6 8.25-6s7.31 2.607 8.25 6M3.75 11.976c-.94 3.393-4.22 6-8.25 6S.69 15.369 0 11.976m3.75 0h16.5m-16.5 0a1.5 1.5 0 0 0-1.5 1.5v3.75a1.5 1.5 0 0 0 1.5 1.5h16.5a1.5 1.5 0 0 0 1.5-1.5v-3.75a1.5 1.5 0 0 0-1.5-1.5m-16.5 0v-3.75a1.5 1.5 0 0 1 1.5-1.5h16.5a1.5 1.5 0 0 1 1.5 1.5v3.75m-16.5 0a1.5 1.5 0 0 1-1.5-1.5V8.226c0-3.393 3.28-6 7.31-6s7.31 2.607 7.31 6v3.75a1.5 1.5 0 0 1-1.5 1.5m-16.5 0h16.5" />
+            </svg>
+          `;
+          
+          toggleBroadcastBtn.textContent = '停止廣播';
+          toggleBroadcastBtn.classList.remove('bg-red-700', 'hover:bg-red-600');
+          toggleBroadcastBtn.classList.add('bg-gray-600', 'hover:bg-gray-500');
+
+        } else {
+          // 停止廣播
+          broadcastStatusText.textContent = '廣播已停止';
+          broadcastStatusText.classList.add('text-gray-500');
+          broadcastStatusText.classList.remove('text-green-400');
+
+          broadcastIconContainer.classList.add('bg-gray-700');
+          broadcastIconContainer.classList.remove('bg-red-600', 'animate-pulse-strong');
+          broadcastIconContainer.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-32 h-32 text-gray-500">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.388,8.288c0.43,0.113,0.835,0.285,1.213,0.512c-0.84,2.94-3.468,5.175-6.574,5.175c-3.106,0-5.734-2.235-6.574-5.175c0.378-0.227,0.783-0.398,1.213-0.512M12,18.75c-6.027,0-10.938-4.912-10.938-10.938c0-6.027,4.912-10.938,10.938-10.938c6.027,0,10.938,4.912,10.938,10.938C22.938,13.838,18.027,18.75,12,18.75z M12,3.375c-4.613,0-8.363,3.75-8.363,8.363c0,4.613,3.75,8.363,8.363,8.363c4.613,0,8.363-3.75,8.363-8.363C20.363,7.125,16.613,3.375,12,3.375z" />
+            </svg>
+          `;
+
+          toggleBroadcastBtn.textContent = '開始廣播';
+          toggleBroadcastBtn.classList.add('bg-red-700', 'hover:bg-red-600');
+          toggleBroadcastBtn.classList.remove('bg-gray-600', 'hover:bg-gray-500');
+        }
+      }
+
+      toggleBroadcastBtn.addEventListener('click', toggleBroadcast);
+
+      // 初始設定 (不再需要，因為 HTML 預設就是 selection-view)
+      // setAppMode('selection'); 
+
+    });
+  </script>
+</body>
+</html>
