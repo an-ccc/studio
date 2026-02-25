@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>賽事更新產生器</title>
+<style>
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+    padding: 15px; 
+    max-width: 450px; 
+    margin: 0 auto; 
+    background-color: #f4f7f6;
+  }
+  .card {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+  }
+  .form-group { margin-bottom: 12px; }
+  label { font-weight: bold; display: block; margin-bottom: 6px; color: #333; }
+  input[type="text"] { 
+    width: 100%; 
+    padding: 12px; 
+    font-size: 20px; 
+    border: 2px solid #ddd; 
+    border-radius: 8px; 
+    box-sizing: border-box;
+    text-align: center;
+    background-color: #fff;
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: #007BFF;
+    background-color: #f0f7ff;
+  }
+  .level-btns { display: flex; gap: 8px; margin-bottom: 15px; }
+  .level-btns button { 
+    flex: 1; 
+    padding: 12px 5px; 
+    font-size: 16px; 
+    font-weight: bold;
+    cursor: pointer; 
+    border: 2px solid #007BFF; 
+    background-color: white; 
+    color: #007BFF; 
+    border-radius: 8px; 
+  }
+  .level-btns button.active { 
+    background-color: #007BFF; 
+    color: white; 
+  }
+  .keypad { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 10px; 
+    margin: 15px 0; 
+  }
+  .keypad button { 
+    padding: 18px; 
+    font-size: 22px; 
+    cursor: pointer; 
+    background-color: #ffffff; 
+    border: 1px solid #dcdcdc; 
+    border-radius: 10px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    font-weight: 600;
+  }
+  .keypad button:active { background-color: #e9e9e9; transform: translateY(2px); }
+  .keypad .action-btn { background-color: #ffebeb; color: #d00; border-color: #ffcccc; }
+  .generate-btn { 
+    width: 100%; 
+    padding: 16px; 
+    font-size: 20px; 
+    font-weight: bold;
+    background-color: #28a745; 
+    color: white; 
+    border: none; 
+    border-radius: 10px; 
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  .result-container { margin-top: 20px; }
+  .output { 
+    white-space: pre-wrap; 
+    background: #2d2d2d; 
+    color: #f8f8f8;
+    padding: 20px; 
+    border-radius: 10px; 
+    min-height: 100px; 
+    font-size: 19px; 
+    line-height: 1.6;
+    border: 1px solid #1a1a1a;
+  }
+  .copy-btn {
+    width: 100%;
+    margin-top: 10px;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2 style="text-align: center; margin-bottom: 20px;">🚀 賽事更新產生器</h2>
+
+  <div class="form-group">
+    <label>選擇等級</label>
+    <div class="level-btns">
+      <button type="button" onclick="setLevel('1200', this)">1200</button>
+      <button type="button" onclick="setLevel('3400', this)">3400</button>
+      <button type="button" onclick="setLevel('6600', this)">6600</button>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>輸入人數</label>
+    <input type="text" id="people" placeholder="點擊後輸入" readonly onclick="setActive('people')">
+  </div>
+
+  <div class="form-group">
+    <label>開始時間 (時:分)</label>
+    <input type="text" id="startTime" placeholder="例如 19:45" readonly onclick="setActive('startTime')">
+  </div>
+
+  <div class="keypad">
+    <button type="button" onclick="typeKey('1')">1</button>
+    <button type="button" onclick="typeKey('2')">2</button>
+    <button type="button" onclick="typeKey('3')">3</button>
+    <button type="button" onclick="typeKey('4')">4</button>
+    <button type="button" onclick="typeKey('5')">5</button>
+    <button type="button" onclick="typeKey('6')">6</button>
+    <button type="button" onclick="typeKey('7')">7</button>
+    <button type="button" onclick="typeKey('8')">8</button>
+    <button type="button" onclick="typeKey('9')">9</button>
+    <button type="button" onclick="typeKey(':')">:</button>
+    <button type="button" onclick="typeKey('0')">0</button>
+    <button type="button" class="action-btn" onclick="backspace()">⌫ 退格</button>
+  </div>
+
+  <button class="generate-btn" onclick="generateResult()">✨ 點我產生結果</button>
+
+  <div class="result-container">
+    <div id="output" class="output">等待輸入中...</div>
+    <button class="copy-btn" onclick="copyText()">📋 一鍵複製文字</button>
+  </div>
+</div>
+
+<script>
+  let selectedLevel = "";
+  let activeInput = null;
+
+  function setLevel(level, btnElement) {
+    selectedLevel = level;
+    document.querySelectorAll('.level-btns button').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+  }
+
+  function setActive(id) {
+    activeInput = document.getElementById(id);
+    document.querySelectorAll('input').forEach(input => input.style.borderColor = '#ddd');
+    activeInput.style.borderColor = '#007BFF';
+  }
+
+  function typeKey(key) {
+    if (activeInput) {
+      activeInput.value += key;
+    } else {
+      alert('請先點擊上方的「人數」或「時間」欄位再按數字！');
+    }
+  }
+
+  function backspace() {
+    if (activeInput) {
+      activeInput.value = activeInput.value.slice(0, -1);
+    }
+  }
+
+  function generateResult() {
+    const people = document.getElementById('people').value;
+    const startTime = document.getElementById('startTime').value;
+
+    if (!selectedLevel || !people || !startTime) {
+      alert('所有欄位都要填寫喔！');
+      return;
+    }
+
+    let cutOffTime = "";
+    if (startTime.includes(':')) {
+      let parts = startTime.split(':');
+      let hours = parseInt(parts[0], 10);
+      let mins = parseInt(parts[1], 10);
+      
+      let totalMins = hours * 60 + mins + 110; 
+      let newHours = Math.floor(totalMins / 60) % 24;
+      let newMins = totalMins % 60;
+      
+      cutOffTime = `${newHours.toString().padStart(2, '0')}:${newMins.toString().padStart(2, '0')}`;
+    } else {
+      alert('時間請輸入冒號，例如 19:45');
+      return;
+    }
+
+    // 這裡輸出的愛心標誌已移除括號
+    const resultStr = `♡賽事更新♡\n${selectedLevel}\n目前人數: ${people}\n開始時間: ${startTime}\n截買時間: ${cutOffTime}`;
+    
+    document.getElementById('output').textContent = resultStr;
+  }
+
+  function copyText() {
+    const textToCopy = document.getElementById('output').textContent;
+    if (textToCopy === '等待輸入中...') return;
+    
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      alert('✅ 複製成功！');
+    });
+  }
+</script>
+
+</body>
+</html>
